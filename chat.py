@@ -1,16 +1,31 @@
+import os
+import threading
 import pandas as pd
 from telegram import Update
-from telegram.ext import MessageHandler, CommandHandler, ApplicationBuilder, ContextTypes, filters
-import os
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from flask import Flask
+from dotenv import load_dotenv
 
-Token = os.getenv("TELEGRAM_BOT_TOKEN")
-if not Token:
+load_dotenv()
+
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+if not TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN not set")
 
-Sheet_ID = "1eX0HjdZKYD9TvvavRWzL1uQ0sCFv_u_X-38vNholUeA"
+SHEET_ID = "1eX0HjdZKYD9TvvavRWzL1uQ0sCFv_u_X-38vNholUeA"
+
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def home():
+    return "Bot is alive!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    flask_app.run(host="0.0.0.0", port=port)
 
 def load_links():
-    url = f"https://docs.google.com/spreadsheets/d/{Sheet_ID}/export?format=csv"
+    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
     try:
         df = pd.read_csv(url)
         if df.empty or 'keywords' not in df.columns or 'link' not in df.columns:
@@ -21,20 +36,15 @@ def load_links():
         return pd.DataFrame(columns=['keywords', 'link'])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("مرحبًا! البوت جاهز للاستخدام ")
+    await update.message.reply_text("البوت شغال 🔥")
 
 async def replay_with_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text.lower().strip()
     df = load_links()
-    
-    if df.empty:
-        await update.message.reply_text("عذرًا، لا توجد روابط متاحة حاليًا.")
-        return
-
     found = False
     for _, row in df.iterrows():
         if pd.isna(row['keywords']) or pd.isna(row['link']):
-            continue    
+            continue
         keywords = [k.strip().lower() for k in str(row['keywords']).split(',')]
         for keyword in keywords:
             if keyword in user_message:
@@ -43,14 +53,13 @@ async def replay_with_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 break
         if found:
             break
-
     if not found:
         await update.message.reply_text("عذرًا، لم أجد أي رابط لهذا الطلب.")
 
-
-app = ApplicationBuilder().token(Token).build()
+app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), replay_with_link))
 
 if __name__ == "__main__":
+    threading.Thread(target=run_flask).start()
     app.run_polling()
