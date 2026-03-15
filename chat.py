@@ -2,6 +2,7 @@ import os
 import threading
 import pandas as pd
 import time
+from difflib import SequenceMatcher
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from flask import Flask
@@ -28,10 +29,12 @@ def run_flask():
 
 
 
-
 cache_links = {}
 last_update = 0
-CACHE_TIME = 28805   # 8 houres
+CACHE_TIME = 28000  # 8h
+
+def similarity(a, b):
+    return SequenceMatcher(None, a, b).ratio()
 
 
 def load_links():
@@ -61,7 +64,7 @@ def load_links():
         last_update = time.time()
 
     except Exception as e:
-        print("Sheet error:", e)
+        print("Error loading sheet:", e)
         cache_links = {}
 
     return cache_links
@@ -70,7 +73,11 @@ def load_links():
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("البوت شغال 🔥")
+    await update.message.reply_text(
+        "أهلاً \n"
+        "أنا Mubtaker Bot\n"
+        "اكتب اسم المادة كما في البورتال بالانجيزيه وسأعطيك الرابط المناسب."
+    )
 
 
 async def replay_with_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -79,19 +86,28 @@ async def replay_with_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     links = load_links()
 
-    best_match = ""
+    best_score = 0
     best_link = ""
+
+    words = user_message.split()
 
     for keyword, link in links.items():
 
-        if keyword in user_message and len(keyword) > len(best_match):
-            best_match = keyword
-            best_link = link
+        for word in words:
 
-    if best_link:
+            score = similarity(word, keyword)
+
+            if score > best_score:
+                best_score = score
+                best_link = link
+
+    if best_score > 0.4:
         await update.message.reply_text(best_link)
     else:
-        await update.message.reply_text("عذرًا، لم أجد أي رابط لهذا الطلب.")
+        await update.message.reply_text(
+            "لم أجد رابط مناسب \n"
+            "حاول كتابة كلمة مختلفة."
+        )
 
 
 
