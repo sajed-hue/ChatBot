@@ -22,23 +22,18 @@ flask_app = Flask(__name__)
 def home():
     return "Bot is alive!"
 
-
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     flask_app.run(host="0.0.0.0", port=port)
 
-
-
 cache_links = {}
 last_update = 0
-CACHE_TIME = 28000  # 8h
+CACHE_TIME = 28000 #8 h
 
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
-
 def load_links():
-
     global cache_links, last_update
 
     if cache_links and time.time() - last_update < CACHE_TIME:
@@ -51,14 +46,15 @@ def load_links():
         links_dict = {}
 
         for _, row in df.iterrows():
-
             if pd.isna(row["keywords"]) or pd.isna(row["link"]):
                 continue
 
             keywords = str(row["keywords"]).lower().split(",")
 
             for keyword in keywords:
-                links_dict[keyword.strip()] = row["link"]
+                keyword = keyword.strip()
+                if keyword:
+                    links_dict[keyword] = row["link"]
 
         cache_links = links_dict
         last_update = time.time()
@@ -69,16 +65,12 @@ def load_links():
 
     return cache_links
 
-
-
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "أهلاً \n"
-        "أنا Mubtaker Bot\n"
-        "اكتب اسم المادة كما في البورتال بالانجليزيه او العربية وسأعطيك الرابط المناسب."
+        "أنا Mubtaker Bot \n\n"
+        "اكتب اسم المادة أو الكلمة، وأنا بعطيك الرابط المناسب "
     )
-
 
 async def replay_with_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -89,34 +81,33 @@ async def replay_with_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     best_score = 0
     best_link = ""
 
-    words = user_message.split()
-
     for keyword, link in links.items():
 
-        for word in words:
+        score_full = similarity(user_message, keyword)
 
-            score = similarity(word, keyword)
+        words = user_message.split()
+        score_words = max([similarity(word, keyword) for word in words]) if words else 0
 
-            if score > best_score:
-                best_score = score
-                best_link = link
+        score = (score_full * 0.6) + (score_words * 0.4)
 
-    if best_score > 0.4:
+        score += len(keyword) * 0.01
+
+        if score > best_score:
+            best_score = score
+            best_link = link
+
+    if best_score > 0.5:
         await update.message.reply_text(best_link)
     else:
         await update.message.reply_text(
-            "عذرا لم أجد رابط مناسب \n"
-            "حاول كتابة كلمة مختلفة."
+            " لم أجد رابط مناسب\n"
+            "جرب تكتب اسم المادة بشكل أوضح"
         )
-
-
-
 
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), replay_with_link))
-
 
 if __name__ == "__main__":
     threading.Thread(target=run_flask).start()
