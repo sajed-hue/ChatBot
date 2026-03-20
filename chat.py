@@ -76,7 +76,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "أهلاً \n"
         "أنا Mubtaker Bot\n"
-        "اكتب اسم المادة كما في البورتال بالانجيزيه وسأعطيك الرابط المناسب."
+        "اكتب اسم المادة كما في البورتال بالانجليزيه او العربية وسأعطيك الرابط المناسب."
     )
 
 
@@ -105,7 +105,7 @@ async def replay_with_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(best_link)
     else:
         await update.message.reply_text(
-            "لم أجد رابط مناسب \n"
+            "عذرا لم أجد رابط مناسب \n"
             "حاول كتابة كلمة مختلفة."
         )
 
