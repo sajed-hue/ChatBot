@@ -9,21 +9,14 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-# تحميل env
 load_dotenv()
 
-# --------------------------------------------------
-# ENV
-# --------------------------------------------------
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not TOKEN:
     raise ValueError("❌ TELEGRAM_BOT_TOKEN not set")
 
-# --------------------------------------------------
-# Flask (Keep Alive)
-# --------------------------------------------------
 app = Flask(__name__)
 
 @app.route("/")
@@ -34,9 +27,6 @@ def run_flask():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
-# --------------------------------------------------
-# Gemini
-# --------------------------------------------------
 try:
     from google import genai
 except:
@@ -49,18 +39,12 @@ if genai and GEMINI_API_KEY:
     except:
         gemini_client = None
 
-# --------------------------------------------------
-# Google Sheet
-# --------------------------------------------------
 SHEET_ID = "1eX0HjdZKYD9TvvavRWzL1uQ0sCFv_u_X-38vNholUeA"
 CACHE_TIME = 60 * 60 * 8
 
 cache_links = {}
 last_update = 0
 
-# --------------------------------------------------
-# Helpers
-# --------------------------------------------------
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
@@ -69,9 +53,6 @@ def normalize(text):
     text = re.sub(r"[^\w\s]", " ", text)
     return re.sub(r"\s+", " ", text)
 
-# --------------------------------------------------
-# Load links
-# --------------------------------------------------
 def load_links():
     global cache_links, last_update
 
@@ -125,9 +106,6 @@ def find_link(msg, links):
 
     return best_score, best_link
 
-# --------------------------------------------------
-# AI
-# --------------------------------------------------
 def ask_ai(message):
     if not gemini_client:
         return "⚠️ AI غير مفعل حالياً.\nاكتب اسم المادة بشكل أوضح."
@@ -149,24 +127,16 @@ def ask_ai(message):
     except:
         return "⚠️ حدث خطأ في الذكاء الاصطناعي"
 
-# --------------------------------------------------
-# Logic
-# --------------------------------------------------
 def generate_reply(message):
     links = load_links()
 
     score, link = find_link(message, links)
 
-    # إذا مادة → رابط
     if score > 0.6:
         return link
 
-    # غير ذلك → AI
     return ask_ai(message)
 
-# --------------------------------------------------
-# Telegram
-# --------------------------------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 أهلاً\n"
@@ -179,9 +149,6 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply = generate_reply(msg)
     await update.message.reply_text(reply)
 
-# --------------------------------------------------
-# Run
-# --------------------------------------------------
 telegram_app = ApplicationBuilder().token(TOKEN).build()
 
 telegram_app.add_handler(CommandHandler("start", start))
