@@ -1,4 +1,7 @@
-python-telegram-bot>=20.5
-pandas>=2.0.0
-flask>=2.3.0
-python-dotenv>=1.0.0
+python-telegram-bot
+Flask
+pandas
+python-dotenv
+google-genai
+gunicorn
+openpyxl
