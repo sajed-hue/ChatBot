@@ -33,9 +33,9 @@ if genai is not None and GEMINI_API_KEY:
     except Exception:
         gemini_client = None
 
-flask_app = Flask(__name__)
+app = Flask(__name__)
 
-@flask_app.route("/")
+@app.route("/")
 def home():
     return "Bot is alive!"
 
